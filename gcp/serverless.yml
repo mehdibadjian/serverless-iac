@@ -1,0 +1,26 @@
+provider:
+  name: google
+  runtime: nodejs18.x
+  region: us-central1
+  environment:
+    NODE_ENV: ${self:custom.stage}
+
+functions:
+  gcpHandler:
+    handler: src/handlers/gcpHandler.handler
+    events:
+      - http:
+          path: gcp-endpoint
+          method: get
+
+resources:
+  Resources:
+    StaticWebsiteBucket:
+      Type: storage.v1.bucket
+      Properties:
+        name: ${self:service}-${self:custom.stage}-static-website
+    WebsiteCDN:
+      Type: compute.v1.urlMap
+      Properties:
+        name: ${self:service}-${self:custom.stage}-cdn
+        defaultService: !Ref StaticWebsiteBucket

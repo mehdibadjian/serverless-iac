@@ -1,0 +1,46 @@
+service: multi-cloud-serverless
+
+frameworkVersion: '3'
+
+plugins:
+  - serverless-plugin-include-dependencies
+  - serverless-offline
+  - serverless-iam-roles-per-function
+
+custom:
+  stage: ${opt:stage, 'dev'}
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  environment:
+    NODE_ENV: ${self:custom.stage}
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+
+functions:
+  awsHandler:
+    handler: src/handlers/awsHandler.handler
+    events:
+      - http:
+          path: aws-endpoint
+          method: get
+
+resources:
+  Resources:
+    StaticWebsiteBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:service}-${self:custom.stage}-static-website
+    WebsiteCDN:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Origins:
+            - DomainName: !GetAtt StaticWebsiteBucket.DomainName
+              Id: S3Origin
+              S3OriginConfig:
+                OriginAccessIdentity: origin-access-identity/cloudfront/E127EXAMPLE51Z
+
+package:
+  individually: true

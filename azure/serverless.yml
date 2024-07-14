@@ -1,0 +1,34 @@
+provider:
+  name: azure
+  runtime: nodejs18.x
+  region: eastus
+  environment:
+    NODE_ENV: ${self:custom.stage}
+
+functions:
+  azureHandler:
+    handler: src/handlers/azureHandler.handler
+    events:
+      - http:
+          path: azure-endpoint
+          method: get
+
+resources:
+  Resources:
+    StaticWebsiteStorageAccount:
+      Type: Microsoft.Storage/storageAccounts
+      Properties:
+        accountType: Standard_LRS
+        kind: StorageV2
+        location: ${self:provider.region}
+        sku:
+          name: Standard_LRS
+    WebsiteCDN:
+      Type: Microsoft.Cdn/profiles/endpoints
+      Properties:
+        profileName: ${self:service}-${self:custom.stage}-cdn
+        location: ${self:provider.region}
+        origins:
+          - name: storageaccount
+            properties:
+              hostName: !GetAtt StaticWebsiteStorageAccount.primaryEndpoints.web
